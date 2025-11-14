@@ -2,8 +2,10 @@ from sqlalchemy import text
 from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from conf.database import get_db, init_db
+from auth.routes import auth_router
 
 version = "v1"
+version_prefix = f"/api/{version}"
 
 description = """
 A REST API for Online Exam Management System
@@ -13,8 +15,6 @@ This REST API is able to:
 - 
 - 
 """
-
-version_prefix = f"/api/{version}"
 
 app = FastAPI(
     title="OMS - Online Exam Management System",
@@ -45,4 +45,8 @@ async def read_root(db: AsyncSession = Depends(get_db)):
         return {"message": "Database connection successful", "result": result.scalar()}
     except Exception as e:
         return {"message": "Database connection failed", "error": str(e)}
+
+
+# Include routers for modular endpoints
+app.include_router(auth_router, prefix=f"{version_prefix}/auth", tags=["Authentication"])
 
