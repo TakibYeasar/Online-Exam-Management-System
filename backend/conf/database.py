@@ -16,6 +16,9 @@ async_session = sessionmaker(
     expire_on_commit=False
 )
 
+# database session generator
+database_session: AsyncSession = async_session()
+
 async def init_db() -> None:
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

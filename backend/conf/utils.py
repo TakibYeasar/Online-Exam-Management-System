@@ -1,0 +1,77 @@
+from typing import List
+from pathlib import Path
+from .config import settings
+from fastapi_mail import FastMail, ConnectionConfig, MessageSchema, MessageType
+
+# Base directory for locating templates or other static resources
+BASE_DIR = Path(__file__).resolve().parent
+
+# Email Configuration
+mail_config = ConnectionConfig(
+    MAIL_USERNAME=settings.MAIL_USERNAME,
+    MAIL_PASSWORD=settings.MAIL_PASSWORD,
+    MAIL_FROM=settings.MAIL_FROM,
+    MAIL_PORT=587,
+    MAIL_SERVER=settings.MAIL_SERVER,
+    MAIL_FROM_NAME=settings.MAIL_FROM_NAME,
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True,
+    # Uncomment and set the TEMPLATE_FOLDER when using email templates
+    # TEMPLATE_FOLDER=Path(BASE_DIR, "templates"),
+)
+
+# Initialize FastMail instance
+mail = FastMail(config=mail_config)
+
+
+def create_message(recipients: List[str], subject: str, body: str) -> MessageSchema:
+    """
+    Create an email message schema for FastMail.
+
+    Args:
+        recipients (List[str]): A list of email addresses to send the email to.
+        subject (str): The subject of the email.
+        body (str): The body of the email, supports HTML.
+
+    Returns:
+        MessageSchema: The constructed email message.
+
+    Raises:
+        ValueError: If recipients list is empty or invalid arguments are provided.
+    """
+    if not recipients:
+        raise ValueError("The recipients list cannot be empty.")
+
+    try:
+        message = MessageSchema(
+            recipients=recipients,
+            subject=subject,
+            body=body,
+            subtype=MessageType.html,  # Specify HTML email subtype
+        )
+        return message
+    except Exception as e:
+        raise ValueError(f"Failed to create the email message: {e}")
+
+
+async def send_email(recipients: List[str], subject: str, body: str) -> None:
+    """
+    Send an email asynchronously using FastMail.
+
+    Args:
+        recipients (List[str]): A list of email addresses to send the email to.
+        subject (str): The subject of the email.
+        body (str): The body of the email, supports HTML.
+
+    Raises:
+        Exception: If sending the email fails.
+    """
+    message = create_message(recipients, subject, body)
+
+    try:
+        await mail.send_message(message)
+    except Exception as e:
+        raise Exception(f"Failed to send email: {e}")
+

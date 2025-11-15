@@ -1,20 +1,47 @@
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
-from .models import User
+
 
 class UserCreateSchema(BaseModel):
+    username: str
     email: EmailStr
-    password: str
-    full_name: Optional[str] = None
-    role: Optional[str] = Field(default="student", description="Role of the user, either 'admin' or 'student'")
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: str = Field(..., min_length=8)
+    role: str = Field(default="student")
 
     class Config:
         schema_extra = {
             "example": {
-                "email": "example@gmail.com",
+                "username": "john_doe",
+                "email": "johndoe@gmail.com",
+                "first_name": "John",
+                "last_name": "Doe",
                 "password": "strongpassword123",
-                "full_name": "John Doe",
                 "role": "student"
             }
         }
 
+
+class EmailSchema(BaseModel):
+    email: EmailStr
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "johndoe@gmail.com",
+            }
+        }
+
+
+class UserLoginSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "johndoe@gmail.com",
+                "password": "strongpassword123"
+            }
+        }

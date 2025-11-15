@@ -2,6 +2,7 @@ from sqlalchemy import text
 from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from conf.database import get_db, init_db
+from auth.middleware import register_middleware
 from auth.routes import auth_router
 
 version = "v1"
@@ -32,6 +33,8 @@ app = FastAPI(
     redoc_url=f"{version_prefix}/redoc",
 )
 
+# Register middleware
+register_middleware(app)
 
 @app.on_event("startup")
 async def on_startup():
