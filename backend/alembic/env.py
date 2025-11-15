@@ -13,6 +13,8 @@ sys.path.insert(0, backend_dir)
 from conf.database import Base
 from conf.config import settings
 from auth.models import User
+from exam.models import Exam, Question
+from result.models import ExamAttempt, AttemptAnswer
 
 
 # Load the database URL and convert it to a synchronous URL
