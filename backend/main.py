@@ -51,5 +51,5 @@ async def read_root(db: AsyncSession = Depends(get_db)):
 
 
 # Include routers for modular endpoints
-app.include_router(auth_router, prefix=f"{version_prefix}/auth", tags=["Authentication"])
+app.include_router(auth_router, prefix=version_prefix, tags=["Authentication"])
 

@@ -1,15 +1,22 @@
 import uuid
+from enum import Enum
 from conf.database import Base
 from datetime import datetime
 from typing import List, TYPE_CHECKING
 from sqlalchemy import (
     Integer, String, DateTime, JSON, Text,
-    ARRAY, UUID, func
+    ARRAY, UUID, func, Enum as SQLAlchemyEnum
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
+
 if TYPE_CHECKING:
-    from result.models import AttemptAnswer
-    from result.models import ExamAttempt
+    from result.models import AttemptAnswer, ExamAttempt
+
+
+class ExamStatus(Enum):
+    DRAFT = "Draft"
+    PUBLISHED = "Published"
+    ARCHIVED = "Archived"
 
 
 class Question(Base):
@@ -29,8 +36,7 @@ class Question(Base):
     tags: Mapped[List[str]] = mapped_column(ARRAY(String))
 
     # Relationships
-    attempt_answers: Mapped[List["AttemptAnswer"]
-                            ] = relationship(back_populates="question")
+    attempt_answers: Mapped[List["AttemptAnswer"]] = relationship("AttemptAnswer", back_populates="question")
 
     def __repr__(self):
         return f"<Question(title={self.title}, complexity={self.complexity})>"
@@ -47,14 +53,13 @@ class Exam(Base):
         DateTime(timezone=True), default=func.now())
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     duration_minutes: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(
-        String, default="Draft")
-
+    status: Mapped[ExamStatus] = mapped_column(
+        SQLAlchemyEnum(ExamStatus), default=ExamStatus.DRAFT, nullable=False)
     questions_order: Mapped[List[uuid.UUID]] = mapped_column(
         ARRAY(UUID(as_uuid=True)))
 
     # Relationships
-    attempts: Mapped[List["ExamAttempt"]] = relationship(back_populates="exam")
+    attempts: Mapped[List["ExamAttempt"]] = relationship("ExamAttempt", back_populates="exam")
 
     def __repr__(self):
         return f"<Exam(title={self.title}, status={self.status})>"

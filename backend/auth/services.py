@@ -1,50 +1,52 @@
 from sqlalchemy.future import select
-from conf.database import database_session
-from .models import User
-from .schemas import UserCreateSchema
-from .utils import generate_password_hash
 from sqlalchemy.ext.asyncio import AsyncSession
+from .models import User, UserRole
+from .schemas import UserCreateSchema, UserUpdateSchema
+from .utils import generate_password_hash
+from typing import Optional
+import uuid
 
 class UserService:
-    async def get_user_by_email(self, email: str):
+    async def get_user_by_email(self, email: str, session: AsyncSession) -> Optional[User]:
         statement = select(User).where(User.email == email)
-        result = await database_session.execute(statement)
+        result = await session.execute(statement)
         user = result.scalars().first()
         return user
-    
-    async def user_exists(self, email: str) -> bool:
-        user = await self.get_user_by_email(email)
-        return True if user is not None else False
-    
-    async def create_user(self, user_data: UserCreateSchema, database_session: AsyncSession) -> User:
+
+    async def get_user_by_id(self, user_id: uuid.UUID, session: AsyncSession) -> Optional[User]:
+        return await session.get(User, user_id)
+
+    async def user_exists(self, email: str, session: AsyncSession) -> bool:
+        user = await self.get_user_by_email(email, session)
+        return user is not None
+
+    async def create_user(self, user_data: UserCreateSchema, session: AsyncSession) -> User:
         user_data_dict = user_data.model_dump()
         raw_password = user_data_dict.pop("password")
 
-        # Hash the password and set default role.
+        # Hash the password
         password_hash = generate_password_hash(raw_password)
         user_data_dict["password_hash"] = password_hash
+
+        # Role is correctly passed as UserRole Enum
         new_user = User(**user_data_dict)
-        new_user.role = "student"
 
-        database_session.add(new_user)
-        await database_session.commit()
-        await database_session.refresh(new_user)
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
         return new_user
-    
-    async def update_user(self, user_id: int, user_data: UserCreateSchema) -> User:
-        user = await database_session.get(User, user_id)
-        if not user:
-            return None
 
-        for key, value in user_data.dict().items():
-            if key == "password":
-                setattr(user, "password_hash", generate_password_hash(value))
-            else:
-                setattr(user, key, value)
+    async def update_user(self, user: User, user_data: UserUpdateSchema, session: AsyncSession) -> User:
+        update_data = user_data.model_dump(exclude_none=True)
 
-        database_session.add(user)
-        await database_session.commit()
-        await database_session.refresh(user)
+        if "password" in update_data:
+            raw_password = update_data.pop("password")
+            user.password_hash = generate_password_hash(raw_password)
+
+        for key, value in update_data.items():
+            setattr(user, key, value)
+
+        await session.commit()
+        await session.refresh(user)
         return user
 
-    

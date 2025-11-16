@@ -3,9 +3,10 @@ import uuid
 import jwt
 from passlib.context import CryptContext
 from itsdangerous import URLSafeTimedSerializer
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Dict, Any, Union
 from conf.config import settings
+from .models import UserRole
 
 # Initialize password hashing context
 passwd_context = CryptContext(schemes=["bcrypt"])
@@ -21,38 +22,59 @@ serializer = URLSafeTimedSerializer(
     salt="email-configuration",
 )
 
+
 def create_verification_token(data: Dict[str, str]) -> str:
+    """Creates a URL-safe, time-limited token for email verification."""
     return serializer.dumps(data, salt="email-confirm-salt")
 
+
 def decode_verification_token(token: str, max_age: int = 3600) -> Dict[str, str]:
+    """Decodes and validates the verification token."""
     try:
-        data = serializer.loads(token, salt="email-confirm-salt", max_age=max_age)
+        data = serializer.loads(
+            token, salt="email-confirm-salt", max_age=max_age)
         return data
     except Exception as e:
         raise ValueError("Invalid or expired token") from e
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
+    """Verifies a plain password against the stored hash."""
     truncated_plain_password = plain_password[:BCRYPT_MAX_LENGTH]
     return passwd_context.verify(truncated_plain_password, password_hash)
 
 
 def generate_password_hash(password: str) -> str:
+    """Generates a hash for the provided password."""
     truncated_password = password[:BCRYPT_MAX_LENGTH]
     return passwd_context.hash(truncated_password)
 
 
 def create_access_token(
-    user_data: Dict[str, str],
+    user_data: Dict[str, Union[str, UserRole]],
     expiry: Optional[timedelta] = None,
     refresh: bool = False,
 ) -> str:
     """
     Create a JWT access token for a user.
+    The user_data is expected to contain 'user_id' (UUID str), 'email', and 'role' (UserRole or str value).
     """
+    if "role" in user_data and isinstance(user_data["role"], UserRole):
+        role_value = user_data["role"].value
+    else:
+        role_value = user_data.get("role")
+
+    expire_time = datetime.now(
+        timezone.utc) + (expiry or timedelta(seconds=ACCESS_TOKEN_EXPIRY_SECONDS))
+
     payload = {
-        "user": user_data,
-        "exp": datetime.now() + (expiry or timedelta(seconds=ACCESS_TOKEN_EXPIRY_SECONDS)),
+        "user_id": str(user_data["user_id"]),
+        "email": user_data["email"],
+        "role": role_value,
+
+        # Standard JWT claims
+        "exp": expire_time,
+        "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),
         "refresh": refresh,
     }
@@ -65,17 +87,21 @@ def create_access_token(
 
 
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
+    """Decodes a JWT token and returns its payload."""
     try:
         return jwt.decode(
             jwt=token,
             key=settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
+            options={"verify_signature": True,
+                     "verify_exp": True},
         )
     except jwt.ExpiredSignatureError:
-        logging.error("Token has expired.")
+        logging.info("Token has expired.")
+        return None
     except jwt.InvalidTokenError as e:
         logging.error(f"Invalid token: {e}")
+        return None
     except Exception as e:
         logging.exception(f"Unexpected error while decoding token: {e}")
-
-    return None
+        return None
