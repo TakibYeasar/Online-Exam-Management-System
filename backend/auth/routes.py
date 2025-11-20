@@ -13,7 +13,6 @@ from fastapi import Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from .utils import (
     create_access_token,
-    verify_password,
     create_verification_token,
     decode_verification_token,
 )
@@ -64,7 +63,7 @@ async def register_user(user_data: UserCreateSchema, session: AsyncSession = Dep
     <h1>Verify Your Email</h1>
     <p>Please click this <a href="{verification_link}">link</a> to verify your email</p>
     """
-    send_email.delay([email], "Verify Your Email", html)
+    send_email([email], "Verify Your Email", html)
 
     return {
         "message": "Account created! Check your email to verify your account.",
@@ -114,41 +113,55 @@ REFRESH_TOKEN_EXPIRY_DAYS = 2
 
 @auth_router.post("/sign-in", summary="User Login")
 async def login_user(login_data: UserLoginSchema, session: AsyncSession = Depends(get_db)):
-    user = await auth_service.get_user_by_email(login_data.email, session)
-
-    if user and verify_password(login_data.password, user.password_hash):
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive."
-            )
-        if not user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="User email not verified."
-            )
-
-        user_id_str = str(user.id)
-
-        access_token = create_access_token(
-            user_data={
-                "email": user.email,
-                "user_id": user_id_str,
-                "role": user.role.value,
-            }
-        )
-        refresh_token = create_access_token(
-            user_data={"email": user.email, "user_id": user_id_str},
-            refresh=True,
-            expiry=timedelta(days=REFRESH_TOKEN_EXPIRY_DAYS),
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "message": "Login successful",
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "user": {"email": user.email, "id": user_id_str, "role": user.role.value},
-            },
-        )
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials."
+    user = await auth_service.authenticate_user(
+        login_data.email,
+        login_data.password,
+        session
     )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials."
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive."
+        )
+    
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User email not verified."
+        )
+
+    # TOKEN GENERATION AND RESPONSE
+    user_id_str = str(user.id)
+    token_payload = {
+        "email": user.email,
+        "user_id": user_id_str,
+        "role": user.role.value,
+    }
+
+    access_token = create_access_token(
+        user_data=token_payload
+    )
+
+    refresh_token = create_access_token(
+        user_data={"email": user.email, "user_id": user_id_str},
+        refresh=True,
+        expiry=timedelta(days=REFRESH_TOKEN_EXPIRY_DAYS),
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": {"email": user.email, "id": user_id_str, "role": user.role.value},
+        },
+    )
+

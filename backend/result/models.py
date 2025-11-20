@@ -8,7 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 if TYPE_CHECKING:
     from auth.models import User
-    from exam.models import Exam, Question
+    from exam.models import Exam, Question 
 
 
 class ExamAttempt(Base):

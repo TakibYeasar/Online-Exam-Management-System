@@ -8,10 +8,15 @@ from typing import Optional, Dict, Any, Union
 from conf.config import settings
 from .models import UserRole
 
+
+# # Define the maximum length bcrypt can handle (72 bytes)
+# BCRYPT_MAX_LENGTH = 72
+
 # Initialize password hashing context
-passwd_context = CryptContext(schemes=["bcrypt"])
-# Define the maximum length bcrypt can handle (72 bytes)
-BCRYPT_MAX_LENGTH = 72
+passwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto"
+)
 
 # Constants
 ACCESS_TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
@@ -38,16 +43,20 @@ def decode_verification_token(token: str, max_age: int = 3600) -> Dict[str, str]
         raise ValueError("Invalid or expired token") from e
 
 
-def verify_password(plain_password: str, password_hash: str) -> bool:
-    """Verifies a plain password against the stored hash."""
-    truncated_plain_password = plain_password[:BCRYPT_MAX_LENGTH]
-    return passwd_context.verify(truncated_plain_password, password_hash)
-
-
 def generate_password_hash(password: str) -> str:
-    """Generates a hash for the provided password."""
-    truncated_password = password[:BCRYPT_MAX_LENGTH]
-    return passwd_context.hash(truncated_password)
+    """Generates a hash for the provided password, truncating if necessary."""
+    # truncated_password = password[:BCRYPT_MAX_LENGTH]
+    return passwd_context.hash(password)
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """
+    Verifies a raw password against a stored hash.
+    Crucially, it truncates the input password before verification 
+    to prevent the 72-byte ValueError.
+    """
+    # truncated_password = password[:BCRYPT_MAX_LENGTH]
+    return passwd_context.verify(password, password_hash)
 
 
 def create_access_token(

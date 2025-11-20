@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from conf.database import get_db, init_db
 from auth.middleware import register_middleware
 from auth.routes import auth_router
+from exam.routes import exam_router
+from result.routes import result_router
 
 version = "v1"
 version_prefix = f"/api/{version}"
@@ -12,9 +14,9 @@ description = """
 A REST API for Online Exam Management System
 
 This REST API is able to:
-- 
-- 
-- 
+- Exam Management (Admin)
+- Exam Participation (Student)
+- Result & Evaluation
 """
 
 app = FastAPI(
@@ -52,4 +54,6 @@ async def read_root(db: AsyncSession = Depends(get_db)):
 
 # Include routers for modular endpoints
 app.include_router(auth_router, prefix=version_prefix, tags=["Authentication"])
+app.include_router(exam_router, prefix=version_prefix, tags=["Exams"])
+app.include_router(result_router, prefix=version_prefix, tags=["Results"])
 

@@ -9,8 +9,7 @@ class UserCreateSchema(BaseModel):
     email: EmailStr = Field(..., max_length=100)
     first_name: Optional[str] = Field(None, max_length=50)
     last_name: Optional[str] = Field(None, max_length=50)
-    password: str = Field(..., min_length=8)
-    role: UserRole = Field(default=UserRole.STUDENT)
+    password: str = Field(..., min_length=8, max_length=72)
 
     class Config:
         json_schema_extra = {
@@ -20,7 +19,6 @@ class UserCreateSchema(BaseModel):
                 "first_name": "John",
                 "last_name": "Doe",
                 "password": "strongpassword123",
-                "role": "student"
             }
         }
 
@@ -30,7 +28,7 @@ class UserUpdateSchema(BaseModel):
     email: Optional[EmailStr] = Field(None, max_length=100)
     first_name: Optional[str] = Field(None, max_length=50)
     last_name: Optional[str] = Field(None, max_length=50)
-    password: Optional[str] = Field(None, min_length=8)
+    password: Optional[str] = Field(None, min_length=8, max_length=72)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
