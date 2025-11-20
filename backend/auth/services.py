@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from .models import User
@@ -16,6 +17,10 @@ class UserService:
     async def user_exists(self, email: str, session: AsyncSession) -> bool:
         user = await self.get_user_by_email(email, session)
         return user is not None
+    
+    async def get_user_by_id(self, user_id: uuid.UUID, session: AsyncSession) -> Optional[User]:
+        user = await session.get(User, user_id)
+        return user
 
     async def create_user(self, user_data: UserCreateSchema, session: AsyncSession) -> User:
         if await self.user_exists(user_data.email, session):

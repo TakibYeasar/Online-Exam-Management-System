@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, LogOut, Menu, X, Globe, Book, Trophy } from 'lucide-react';
+import { useCurrentAuthenticatedUser } from '../../hooks/auth/useGetcurrentUser';
+import { useNavigate } from 'react-router-dom';
 
 const useNavigation = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -16,9 +18,19 @@ const useNavigation = () => {
 
 
 const Header = () => {
+    const navigate = useNavigate();
     const { isOpen, toggleMenu, navItems } = useNavigation();
 
-    const userName = "Alice Johnson";
+    const { data: user, isLoading, isError } = useCurrentAuthenticatedUser();
+
+    useEffect(() => {
+        if (isError) {
+            navigate("/sign-in");
+        }
+    }, [isError]);
+
+    if (isLoading) return <p>Loading user...</p>;
+
     const handleLogout = () => {
         console.log("User logged out.");
         window.location.href = '/';
@@ -50,26 +62,46 @@ const Header = () => {
                     </nav>
 
                     <div className="hidden md:flex items-center space-x-3">
-                        <span className="text-sm font-medium text-foreground/80 hidden lg:inline">
-                            Welcome, <strong className="text-primary">{userName}</strong>
-                        </span>
 
-                        <div className="relative group">
-                            <User className="h-8 w-8 p-1 rounded-full bg-secondary text-primary cursor-pointer hover:bg-accent transition-colors" />
-                            <div className="absolute right-0 mt-3 w-40 origin-top-right rounded-md shadow-2xl bg-card ring-1 ring-black/10 hidden group-hover:block transition-all duration-300 z-50">
-                                <div className="py-1">
-                                    <a href="#profile" className="flex items-center px-4 py-2 text-sm text-foreground/80 hover:bg-secondary/50 transition-colors">
-                                        <User className="h-4 w-4 mr-2" /> My Profile
-                                    </a>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center w-full px-4 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
-                                    >
-                                        <LogOut className="h-4 w-4 mr-2" /> Sign Out
-                                    </button>
+                        {user ? (
+                            <>
+                                <div className="relative group">
+                                    <span className="text-sm font-medium text-foreground/80 hidden lg:inline">
+                                        Welcome, <strong className="text-primary">{user.username}</strong>
+                                    </span>
+
+
+                                    <User className="h-8 w-8 p-1 rounded-full bg-secondary text-primary cursor-pointer hover:bg-accent transition-colors" />
+                                    <div className="absolute right-0 mt-3 w-40 origin-top-right rounded-md shadow-2xl bg-card ring-1 ring-black/10 hidden group-hover:block transition-all duration-300 z-50">
+                                        <div className="py-1">
+                                            <a href="#profile" className="flex items-center px-4 py-2 text-sm text-foreground/80 hover:bg-secondary/50 transition-colors">
+                                                <User className="h-4 w-4 mr-2" /> My Profile
+                                            </a>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="flex items-center w-full px-4 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
+                            </>
+                        ) :
+                            (
+                                <div className="hidden md:flex space-x-2 lg:space-x-6">
+                                    <a href='/sign-up' className="inline-flex items-center text-sm font-medium text-foreground/80 hover:text-primary transition-colors duration-200 p-2 rounded-lg">
+                                        Sign Up
+                                    </a>
+
+                                    <a href='/sign-in' className="inline-flex items-center text-sm font-medium text-foreground/80 hover:text-primary transition-colors duration-200 p-2 rounded-lg">
+                                        Sign In
+                                    </a>
+                                </div>
+                            )}
+
+
+
                     </div>
 
                     <button

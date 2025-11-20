@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Globe } from 'lucide-react';
 import AuthInput from '../../components/common/AuthInput';
+import { useSigninUser } from '../../hooks/auth/useSigninUser';
+import { useNavigate } from 'react-router-dom';
 
 const SignIn = ({ onSwitchToSignUp = () => console.log('Switch to Sign Up triggered.') }) => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({ email: '', password: '' });
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const signinUserMutation = useSigninUser();
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log('Sign In Data:', formData);
+        signinUserMutation.mutate(formData);
+        navigate("/");
     };
+
+    if (signinUserMutation.isLoading) return <p>Signing in...</p>;
+    if (signinUserMutation.isError) return <p>Error: {signinUserMutation.error.message}</p>;
 
     const title = 'Sign In to ExamPro';
     const description = 'Enter your credentials to access the Exam Management System.';

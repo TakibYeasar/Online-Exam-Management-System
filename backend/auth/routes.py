@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from datetime import timedelta
-from .dependencies import RoleChecker
+from .dependencies import  get_current_user, RoleChecker
 from .services import UserService
 from .schemas import (
     UserCreateSchema,
@@ -19,7 +19,7 @@ from .utils import (
 from fastapi.responses import JSONResponse
 from conf.utils import send_email
 from conf.config import settings
-from .models import UserRole
+from .models import User, UserRole
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 auth_service = UserService()
@@ -164,4 +164,13 @@ async def login_user(login_data: UserLoginSchema, session: AsyncSession = Depend
             "user": {"email": user.email, "id": user_id_str, "role": user.role.value},
         },
     )
+
+@auth_router.get("/current-user", response_model=UserOutSchema, summary="Get Current User")
+async def get_current_authenticated_user(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the currently authenticated user's details.
+    """
+    return current_user
 
