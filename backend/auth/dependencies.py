@@ -4,7 +4,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from conf.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from .models import User
+from .models import User, UserRole
 from .services import UserService
 from .utils import decode_token
 import uuid
@@ -125,3 +125,18 @@ class RoleChecker:
             )
 
         return True
+
+
+requires_admin = RoleChecker(allowed_roles=[UserRole.ADMIN.value])
+
+async def get_admin_user(
+    current_user: User = Depends(get_current_user),
+    role_check: bool = Depends(requires_admin)
+) -> User:
+    """
+    FastAPI dependency that returns the User object only if they are logged in, 
+    active, verified, AND have the 'admin' role.
+    """
+    return current_user
+
+
